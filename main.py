@@ -12,7 +12,7 @@ st.set_page_config(page_title="Survey Horizontal Extractor", page_icon="📊", l
 st.title("📊 Horizontal Survey Data Extractor")
 st.write("Upload a survey photo to automatically append a single structured row matching your Google Sheet layout.")
 
-# Define the exact target Google Sheet ID
+# Define your exact target Google Sheet ID
 SPREADSHEET_ID = "1ZlggcVqdCz5KLX2ZOBnAN6zXquIIc4Iyd2SHLN7Jtkw"
 
 # Authenticate with Google Sheets & Gemini securely using Streamlit Secrets
@@ -22,27 +22,25 @@ def init_connections():
         # 1. Setup Gemini API
         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
         
-        # 2. Setup Google Sheets Credentials manually from secrets to avoid st-gsheets-connection bugs
+        # 2. Extract the complete credentials dictionary
+        credentials_dict = dict(st.secrets["gsheets_credentials"])
+        
+        # Repair escaped newline strings inside the private key
+        credentials_dict["private_key"] = credentials_dict["private_key"].replace(r"\n", "\n")
+        
+        # Authenticate Scopes
         scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-        
-        credentials_dict = {
-            "type": st.secrets["connections"]["gsheets"]["type"],
-            "project_id": st.secrets["connections"]["gsheets"]["project_id"],
-            "private_key_id": st.secrets["connections"]["gsheets"]["private_key_id"],
-            "private_key": st.secrets["connections"]["gsheets"]["private_key"].replace(r"\n", "\n"),
-            "client_email": st.secrets["connections"]["gsheets"]["client_email"],
-            "client_id": st.secrets["connections"]["gsheets"]["client_id"],
-        }
-        
         creds = Credentials.from_service_account_info(credentials_dict, scopes=scopes)
+        
+        # Open Google Sheet
         client = gspread.authorize(creds)
-        sheet = client.open_by_key(SPREADSHEET_ID).get_worksheet(0) # Grabs the first tab
+        sheet = client.open_by_key(SPREADSHEET_ID).get_worksheet(0) # Selects first tab
         return sheet
     except Exception as e:
         st.error(f"Configuration/Secrets Error: {e}")
         st.stop()
 
-# Initialize sheet
+# Initialize sheet connection
 sheet = init_connections()
 
 uploaded_file = st.file_uploader("Choose a survey form image...", type=["jpg", "jpeg", "png"])
@@ -105,7 +103,7 @@ if uploaded_file is not None:
                 
                 data = json.loads(raw_text)
                 
-                # Strict 27-column mapping matching your spreadsheet layout arrays
+                # Strict 27-column mapping layout order matching your spreadsheet grid
                 row_values = [
                     data.get("NAME", ""),
                     data.get("PAGE_1_A_BUDGET_1", ""), data.get("PAGE_1_A_BUDGET_2", ""), data.get("PAGE_1_A_BUDGET_3", ""),
@@ -119,12 +117,12 @@ if uploaded_file is not None:
                     data.get("PAGE_2_E_1", ""), data.get("PAGE_2_E_2", ""), data.get("PAGE_2_E_3", "")
                 ]
                 
-                # Directly append row values directly beneath your last active row
+                # Directly append values as a horizontal row
                 sheet.append_row(row_values)
                 
                 st.success(f"🎉 Success! Row appended for: {data.get('NAME')}")
                 
-                # Show Preview
+                # Render UI Preview Table
                 preview_df = pd.DataFrame([row_values])
                 st.dataframe(preview_df)
                 
