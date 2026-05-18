@@ -7,9 +7,9 @@ import pandas as pd
 from PIL import Image
 
 # Page Configuration
-st.set_page_config(page_title="Survey Horizontal Extractor", page_icon="📊", layout="wide")
+st.set_page_config(page_title="GCash Survey", page_icon="📊", layout="wide")
 
-st.title("📊 Horizontal Survey Data Extractor")
+st.title("GCash Survey")
 st.write("Upload a survey photo to automatically append a single structured row matching your Google Sheet layout.")
 
 # Define your exact target Google Sheet ID
@@ -49,7 +49,7 @@ if uploaded_file is not None:
     image = Image.open(uploaded_file)
     st.image(image, caption="Uploaded Survey Form", use_container_width=True)
     
-    if st.button("🚀 Process & Append Row", type="primary"):
+    if st.button("🚀 Scan", type="primary"):
         with st.spinner("AI is parsing the layout into a horizontal row..."):
             try:
                 model = genai.GenerativeModel('gemini-2.5-flash')
